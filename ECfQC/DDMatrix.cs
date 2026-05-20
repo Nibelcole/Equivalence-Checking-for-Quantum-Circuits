@@ -7,9 +7,9 @@ using static Utility;
 /// </summary>
 public class DDMatrix
 {
-    public static readonly Dictionary<string, DDMatrix> gates = new() {
-        {"id", Identity(1)},
-    };
+    public static readonly Dictionary<string, Tuple<DDMatrix, int>> gates = new() {
+        {"id", new(Identity(1), 0)},
+    }; // the int shows the number of qubits this gate is applied to
     public readonly int qubits;
 
     public readonly Complex rootWeight;
@@ -24,6 +24,14 @@ public class DDMatrix
     {
         (rootWeight, root) = DDNode.Construct(matrix, 0, matrix.GetLength(0), 0, matrix.GetLength(1));
         qubits = (int) Math.Log2(matrix.GetLength(0));
+    }
+
+    /// <summary>
+    /// Copies the given DDMatrix.
+    /// </summary>
+    public DDMatrix(DDMatrix matrix)
+    {
+        
     }
 
     /// <summary>
@@ -75,9 +83,9 @@ public class DDMatrix
     }
 
     /// <summary>
-    /// Extends a DDMatrix representing a gate with tensor multiplication
+    /// Extends a DDMatrix representing a gate with tensor multiplication. a, b and c are the targeted bits.
     /// </summary>
-    public static DDMatrix Extend(DDMatrix m, int targetedBit)
+    public static DDMatrix Extend(DDMatrix m, int qubits, int a, int b = -1, int c = -1)
     {
         return new DDMatrix(0);
     }
@@ -118,12 +126,6 @@ public class DDMatrix
         /// (matrix, 0, matrix.GetLength(0), 0, matrix.GetLength(1)) for a given matrix, so the 
         /// entire matrix is converted.
         /// </summary>
-        /// <param name="matrix"></param>
-        /// <param name="x0"></param>
-        /// <param name="x1"></param>
-        /// <param name="y0"></param>
-        /// <param name="y1"></param>
-        /// <returns></returns>
         public static Tuple<Complex, DDNode> Construct(Complex[,] matrix, int x0, int x1, int y0, int y1)
         {
             if (x0 + 1 == x1 && y0 + 1 == y1) // we are at one element
