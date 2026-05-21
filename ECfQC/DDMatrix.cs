@@ -59,6 +59,14 @@ public class DDMatrix
     }
 
     /// <summary>
+    /// Changes this DDMatrix, so it becomes the conjugate-complex of itself.
+    /// </summary>
+    public void ConjugateComplex()
+    {
+        
+    }
+
+    /// <summary>
     /// Returns the matrix multiplication of the two given values
     /// </summary>
     public static DDMatrix Multiply(DDMatrix first, DDMatrix second)
@@ -88,6 +96,18 @@ public class DDMatrix
     public static DDMatrix Extend(DDMatrix m, int qubits, int a, int b = -1, int c = -1)
     {
         return new DDMatrix(0);
+    }
+
+    /// <summary>
+    /// Returns the tensor product of two matrices. 
+    /// 
+    /// <br/><br/>
+    /// The two DDMatrices are consumed in the process. 
+    /// Do not use them afterwards.
+    /// </summary>
+    public static DDMatrix TensorProduct(DDMatrix first, DDMatrix second)
+    {
+        return new DDMatrix(0); 
     }
 
 
