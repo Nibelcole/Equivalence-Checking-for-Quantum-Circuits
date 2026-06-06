@@ -61,7 +61,7 @@ ECfQC requires the quantum circuits it compares to be provided in separate textf
 
 Each line has to be formatted as follows:
 ```shell
-<gate> [<q1>] [<q2>] [<q3>]
+<gate> [<q1>] [<q2\>] [<q3\>]
 ```
 Here \<gate\> is the id of the gate that should be applied, while \<q1\>, \<q2\> and \<q3\> denote the qubits, that this gate should be applied on.
 
@@ -69,7 +69,7 @@ The full list of gates available by default and the number of arguments they tak
 
 | Gate | Id | Matrix | Number of arguments 
 | - | - | - | - |
-| Identity | id | $$\begin{bmatrix}1&0&\cdot\cdot\cdot&0 \\0&1&\cdot\cdot\cdot&0 \\ \vdots&\vdots&\ddots&\vdots  \\0&0&\cdot\cdot\cdot&1 \end{bmatrix}$$ | 0 | An empty file is interpreted as if it contains and identity gate |
+| Identity | id | ```math \begin{bmatrix}1&0&\cdot\cdot\cdot&0 \\0&1&\cdot\cdot\cdot&0 \\ \vdots&\vdots&\ddots&\vdots  \\0&0&\cdot\cdot\cdot&1 \end{bmatrix}``` | 0 | An empty file is interpreted as if it contains and identity gate |
 | Pauli-X | pX | $$\begin{bmatrix}0 &1 \\1 & 0 \end{bmatrix}$$ | 1 | 
 | Pauli-Y | pY | $$\begin{bmatrix}0 &-i \\i & 0 \end{bmatrix}$$ | 1 | 
 | Pauli-Z | pZ | $$\begin{bmatrix}1 &0 \\0 & -1 \end{bmatrix}$$ | 1 | 
