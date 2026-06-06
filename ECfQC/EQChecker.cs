@@ -7,15 +7,19 @@ public static class EQChecker
 {
     /// <summary>
     /// Checks for equivalence of the two given DDMatrices with the given strategy. <br/><br/>
-    /// Returns true if and only if both matrices are equivalent.
+    /// 
+    /// Returns 1 if G --> I <-- G' is exactly equal to an identity matrix.<br/>
+    /// Returns 2 if G --> I <-- G' differs at most by a global phase vector 
+    /// e^(i*alpha) from an identity matrix without being fully equal.<br/>
+    /// Returns 0 otherwise.
     /// </summary>
-    public static bool Check(List<DDMatrix> first, List<DDMatrix> second, string strategy, int length)
+    public static int Check(List<DDMatrix> first, List<DDMatrix> second, string strategy, int length)
     {
         if (first.Count == 0)
         {
             if (second.Count == 0)
             {
-                return true; // empty circuits are interpreted as identity matrices
+                return 1; // empty circuits are interpreted as identity matrices
             }
 
         }
@@ -24,7 +28,7 @@ public static class EQChecker
         second.Reverse();
         foreach (var m in second)
         {
-            m.ConjugateComplex();
+            m.ConjugateTransposed();
         }
 
         DDMatrix result;
@@ -40,7 +44,7 @@ public static class EQChecker
             result = CalLookAhead(first, second, length);
                 break;
             default:
-                throw new ArgumentException("Error: " + strategy + " is not a known type of strategy. " +
+                throw new ArgumentException("Error: \"" + strategy + "\" is not a known type of strategy. " +
                 "See -h or --help for more information.");
         }
 

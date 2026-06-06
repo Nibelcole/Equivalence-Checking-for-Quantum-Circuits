@@ -1,37 +1,105 @@
+using System.ComponentModel.Design.Serialization;
+using System.IO.Pipelines;
 using System.Numerics;
-using System.Security.Cryptography;
 using static Utility;
 
 /// <summary>
-/// A class implementing a 2^q x 2^q matrix as a decision diagram to represent a quantum gate
+/// A class implementing a 2^q x 2^q matrix as a decision diagram to represent a quantum gate.
 /// </summary>
-public class DDMatrix
+public partial class DDMatrix
 {
     public static readonly Dictionary<string, Tuple<DDMatrix, int>> gates = new() {
         {"id", new(Identity(1), 0)},
+        {"pauliX", new(new DDMatrix(new Complex[,]
+            {
+                {0, 1},
+                {1,0}
+            }
+            ), 1)
+        },
+        {"pauliY", new(new DDMatrix(new Complex[,]
+            {
+                {0, -Complex.ImaginaryOne},
+                {Complex.ImaginaryOne,0}
+            }
+            ), 1)
+        },
+        {"pauliX", new(new DDMatrix(new Complex[,]
+            {
+                {1, 0},
+                {0,-1}
+            }
+            ), 1)
+        },
+        {"hadamard", new(new DDMatrix(new Complex[,]
+            {
+                {1/Math.Sqrt(2), 1/Math.Sqrt(2)},
+                {1/Math.Sqrt(2),-1/Math.Sqrt(2)}
+            }
+            ), 1)
+        },
+        {"cnot", new(new DDMatrix(new Complex[,]
+            {
+                {1,0,0,0},
+                {0,1,0,0},
+                {0,0,0,1},
+                {0,0,1,0}
+            }
+            ), 2)
+        },
+        {"swap", new(new DDMatrix(new Complex[,]
+            {
+                {1,0,0,0},
+                {0,0,1,0},
+                {0,1,0,0},
+                {0,0,0,1}
+            }
+            ), 2)
+        },
+        {"toffoli", new(new DDMatrix(new Complex[,]
+            {
+                {1,0,0,0,0,0,0,0},
+                {0,1,0,0,0,0,0,0},
+                {0,0,1,0,0,0,0,0},
+                {0,0,0,1,0,0,0,0},
+                {0,0,0,0,1,0,0,0},
+                {0,0,0,0,0,1,0,0},
+                {0,0,0,0,0,0,0,1},
+                {0,0,0,0,0,0,1,0},
+            }
+            ), 3)
+        },
     }; // the int shows the number of qubits this gate is applied to
+    
     public readonly int qubits;
 
-    public readonly Complex rootWeight;
+    public Complex rootWeight;
     public readonly DDNode root;
 
-    public DDMatrix(int qubits)
+    public readonly DDNodeList nodeList = new DDNodeList();
+
+    public DDMatrix(DDNodeList nodeList, Complex rootWeight, DDNode root)
     {
-        this.qubits = qubits;
+        this.nodeList = nodeList;
+        this.rootWeight = rootWeight;
+        this.root = root;
     }
 
-    public DDMatrix(Complex[,] matrix)
+    public DDMatrix(Complex[,] matrix) // it is assumed that matrix is quadratic
     {
-        (rootWeight, root) = DDNode.Construct(matrix, 0, matrix.GetLength(0), 0, matrix.GetLength(1));
-        qubits = (int) Math.Log2(matrix.GetLength(0));
+        this.qubits = (int)Math.Log2(matrix.GetLength(0));
+        this.nodeList = new();
+        (rootWeight, root) = DDNode.Construct(nodeList, matrix, 0, matrix.GetLength(0), 
+            0, matrix.GetLength(1), qubits);
     }
 
     /// <summary>
-    /// Copies the given DDMatrix.
+    /// Creates a deep copy of the given DDMatrix.
     /// </summary>
-    public DDMatrix(DDMatrix matrix)
+    public DDMatrix Copy()
     {
-        
+        DDNodeList list = new();
+        return new DDMatrix(list, rootWeight, root.Copy(list));
     }
 
     /// <summary>
@@ -39,15 +107,51 @@ public class DDMatrix
     /// </summary>
     public static DDMatrix Identity(int qubits)
     {
-        return new DDMatrix(0);
+        DDNodeList list = new();
+        return new DDMatrix(list, 1, DDNode.Identity(list, qubits));
     }
 
     /// <summary>
-    /// Returns true if and only if this DDMatrix is equal to the identity matrix of the same size
+    /// Returns 1 if this matrix is exactly equal to an identity matrix.<br/>
+    /// Returns 2 if this DDMatrix differs at most by a global phase vector 
+    /// e^(i*alpha) from an identity matrix without being fully equal.<br/>
+    /// Returns 0 otherwise.
     /// </summary>
-    public bool EqualsIdentity()
+    public int EqualsIdentity()
     {
-        return false;
+        bool correctStructure = root.EqualsIdentity();
+        if (!correctStructure)
+        {
+            return 0;
+        }
+        if (CompareComplex(rootWeight, Complex.One))
+        {
+            return 1;
+        }
+
+        // according to the following equation e^(i*alpha)
+        // == cos(alpha) + i*sin(alpha) 
+        // == Re(e^(i*alpha))+ Im(e^(i*alpha))
+        // with alpha = [0, 2*pi)
+        // ==> there is an alpha with e^(i*alpha) == global phase
+        // if and only if arccos(Re(e^(i*alpha))) == arcsin(Im(e^(i*alpha)))
+        double re = Math.Acos(rootWeight.Real);
+        double im = Math.Asin(rootWeight.Imaginary);
+        if (double.IsNaN(re) || double.IsNaN(im))
+        {
+            return 0;
+        }
+        // re and im need to be equal
+        // We "misuse" CompareComplex here since it provides the same functionality of comparing 
+        // double values with a delta, so we wont have to implement a separate CompareDouble function.
+        if (CompareComplex(new(re, im), new(im, re)))
+        {
+            return 2;
+        }
+        else
+        {
+            return 0;
+        }
     }
 
     /// <summary>
@@ -55,47 +159,202 @@ public class DDMatrix
     /// </summary>
     public int Count()
     {
-        return 0;
+        return nodeList.Count();
     }
 
     /// <summary>
-    /// Changes this DDMatrix, so it becomes the conjugate-complex of itself.
+    /// Changes this DDMatrix, so it becomes the conjugate-transposed of itself.
     /// </summary>
-    public void ConjugateComplex()
+    public void ConjugateTransposed()
     {
-        
+        foreach (var node in nodeList.GetAll())
+        {
+            for (int i = 0; i<4;i++)
+            {
+                node.weights[i] = Complex.Conjugate(node.weights[i]);
+            }
+            (node.weights[1], node.weights[2]) = (node.weights[2], node.weights[1]);
+            (node.next[1], node.next[2]) = (node.next[2], node.next[1]);
+        }
+        rootWeight = Complex.Conjugate(rootWeight);
     }
 
     /// <summary>
-    /// Returns the matrix multiplication of the two given values
+    /// Returns the matrix multiplication of the two given values. first and second are not consumed by
+    /// this operation.
     /// </summary>
     public static DDMatrix Multiply(DDMatrix first, DDMatrix second)
     {
-        return new DDMatrix(0);
+        DDNodeList list = new();
+        var (a,b) = DDNode.Multiply(list, first.root,second.root);
+        return new DDMatrix(list, a*first.rootWeight*second.rootWeight, b);
     }
 
     /// <summary>
-    /// Returns the matrix multiplication of the two given values
+    /// Returns the matrix multiplication of the two given values. first and second are not consumed by
+    /// this operation.
     /// </summary>
     public static Complex[] Multiply(Complex[] first, DDMatrix second)
     {
-        return first;
+        var result = DDNode.Multiply(first, second.root,0,first.Length);
+        for (int i = 0;i<result.Length;i++)
+        {
+            result[i] = result[i]*second.rootWeight;
+        }
+        return result;
     }
 
     /// <summary>
-    /// Returns the matrix multiplication of the two given values
+    /// Returns the matrix multiplication of the two given values. first and second are not consumed by
+    /// this operation.
     /// </summary>
     public static Complex[] Multiply(DDMatrix first, Complex[] second)
     {
-        return second;
+        var result = DDNode.Multiply(first.root, second,0,second.Length);
+        for (int i = 0;i<result.Length;i++)
+        {
+            result[i] = result[i]*first.rootWeight;
+        }
+        return result;
     }
 
     /// <summary>
     /// Extends a DDMatrix representing a gate with tensor multiplication. a, b and c are the targeted bits.
+    /// 
+    /// <br/><br/>
+    /// If a is not given, the identity matrix of the correct size will be returned instead.
+    /// m is consumed by this operation. Do not use it afterwards.
     /// </summary>
-    public static DDMatrix Extend(DDMatrix m, int qubits, int a, int b = -1, int c = -1)
+    public static DDMatrix Extend(DDMatrix m, int qubits, int a = -1, int b = -1, int c = -1)
     {
-        return new DDMatrix(0);
+        if (a == -1) // zero arguments
+        {
+            return Identity(qubits);
+        }
+        // one argument or (two arguments and no permutation is required) or (three arguments and no permutation is required)
+        if (b == -1 || a == b - 1 || (a == b - 1 && b == c - 1))
+        {
+            DDMatrix result;
+            int i = 1;
+            if (a == 0)
+            {
+                result = m;
+                if (b != -1)
+                {
+                    if (c != -1)
+                    {
+                        i++;
+                    }
+                }
+            }
+            else
+            {
+                result = Identity(qubits);
+            }
+
+            for (; i < qubits; i++)
+            {
+                DDMatrix next;
+                if (i == a)
+                {
+                    next = m;
+                    if (b != -1)
+                    {
+                        if (c != -1)
+                        {
+                            i++;
+                        }
+                    }
+                }
+                else
+                {
+                    next = Identity(qubits);
+                }
+                result = TensorProduct(result, next);
+            }
+            return result;
+        }
+
+        List<DDMatrix> swapGates = new();
+        if (c == -1) // two arguments and permutation is required
+        {
+            if (a < b) // move b to a
+            {
+                while (a != b - 1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, b - 1, b));
+                    b--;
+                }
+            }
+            else // move a to b
+            {
+                while (a != b - 1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, a-1, a));
+                    a--;
+                }
+                b++;
+            }
+        }
+        else // three arguments and permutation is required
+        {
+
+            if (a < b) // move b to a+1
+            {
+                if (c > a && c < b)
+                {
+                    c++;
+                }
+                while (a != b - 1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, b - 1, b));
+                    b--;
+                }
+            }
+            else // move a to b-1
+            {
+                if (c < a && c > b)
+                {
+                    c++;
+                }
+                while (a != b - 1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, a - 1, a));
+                    a--;
+                }
+                b++;
+            }
+
+            if (c<a) // move c to a+2 from below
+            {
+                while (c != b +1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, c, c+1));
+                    c++;
+                }
+                a--;
+                b--;
+            } else // move c to a+2 from above
+            {
+                while (c != b +1)
+                {
+                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, c-1, c));
+                    c--;
+                }
+            }
+
+        }
+        DDMatrix modifiedM = Extend(m, qubits, a, b);
+        foreach (var s in swapGates)
+        {
+            modifiedM = Multiply(s, modifiedM);
+            s.ConjugateTransposed();
+        }
+        foreach (var s in swapGates)
+        {
+            modifiedM = Multiply(modifiedM, s);
+        }
+        return modifiedM;
     }
 
     /// <summary>
@@ -104,111 +363,32 @@ public class DDMatrix
     /// <br/><br/>
     /// The two DDMatrices are consumed in the process. 
     /// Do not use them afterwards.
+    /// 
+    /// <br/><br/>
+    /// Note: We do not allow multiple DDMatrices to use the same DDNodes, which is why second is also 
+    /// seen as "consumed", despite the fact that it itself is not changed.
     /// </summary>
     public static DDMatrix TensorProduct(DDMatrix first, DDMatrix second)
     {
-        return new DDMatrix(0); 
-    }
-
-
-    public class DDNode
-    {
-        private readonly Complex[] weights;
-        private readonly DDNode[] next;
-
-        // constants
-        public static readonly DDNode zero = new DDNode([], new DDNode[4]);
-        public static readonly DDNode one = new DDNode(new Complex[4], []);
-
-        public DDNode(Complex[]? weights, DDNode[]? next)
+        Complex w = first.rootWeight * second.rootWeight;
+        var all = first.nodeList.GetAll();
+        foreach (var n in all)
         {
-            this.weights = weights;
-            this.next = next;
-        }
-
-        /// <summary>
-        /// Returns true if and only if this DDNode is equal to the identity matrix of the same size
-        /// </summary>
-        public bool EqualsIdentity(DDNode other)
-        {
-            return false;
-        }
-
-        /// <summary>
-        /// Recursively constructs the DDNodes for a DDMatrix from the given matrix.<br/><br/>
-        /// 
-        /// The int parameters are indexes used to divide the matrix into rectangular parts.
-        /// The method only considers the elements with indexes between [x0,y0] (both included) and 
-        /// [x1,y1] (both excluded). This is used internally to divide the matrix into parts.<br/><br/>
-        /// 
-        /// This method should only be used with matrices of size 2^q x 2^q with q being an integer.
-        /// If this method is called from the outside, the parameters should be 
-        /// (matrix, 0, matrix.GetLength(0), 0, matrix.GetLength(1)) for a given matrix, so the 
-        /// entire matrix is converted.
-        /// </summary>
-        public static Tuple<Complex, DDNode> Construct(Complex[,] matrix, int x0, int x1, int y0, int y1)
-        {
-            if (x0 + 1 == x1 && y0 + 1 == y1) // we are at one element
+            for (int i = 0; i < 4; i++)
             {
-                if (CompareComplex(matrix[x0, y0], Complex.Zero))
+                if (n.next[i] == DDNode.one)
                 {
-                    return new(Complex.Zero, zero);
-                }
-                else
-                {
-                    return new(matrix[x0, y0], one);
+                    n.next[i] = second.root;
                 }
             }
-            else
-            {
-                Tuple<Complex, DDNode>[] results = [
-                    Construct(matrix, x0, x1/2, y0, y1/2), Construct(matrix, (x0+x1)/2, x1, y0, y1/2),
-                    Construct(matrix, x0, x1/2, (y0+y1)/2, y1), Construct(matrix, (x0+x1)/2, x1, (y0+y1)/2, y1)
-                ];
-
-                // check if Node should be zero and determines the first non zero weight for normalization
-                bool allNodesZero = true;
-                Complex firstNonZeroValue = Complex.Zero;
-                for (int i = 0; i < 4; i++)
-                {
-                    if (results[i].Item2 != zero)
-                    {
-                        allNodesZero = false;
-                        firstNonZeroValue = results[i].Item1;
-                        break;
-                    }
-                }
-                if (allNodesZero)
-                {
-                    return new(Complex.Zero, zero);
-                }
-
-                // normalize weights and create arrays
-                Complex[] weights = new Complex[4];
-                DDNode[] nodes = new DDNode[4];
-                for (int i = 0; i < 4; i++)
-                {
-                    // normalizes the weights, so that the first non zero weight is equal to 1
-                    // This allows us to make DDNodes with different weights comparable
-                    weights[i] = results[i].Item1/firstNonZeroValue; 
-                    nodes[i] = results[i].Item2;
-                }
-
-                // remove duplicates
-                for (int i = 3; i>=0;i--)
-                {
-                    for (int k=0;k<i;k++)
-                    {
-                        if (nodes[i] == nodes[k])
-                        {
-                            nodes[k] = nodes[i];
-                            break;
-                        }
-                    }
-                }
-                
-                return new (firstNonZeroValue, new DDNode(weights, nodes));
-            }
         }
+        var all2 = second.nodeList.GetAll();
+        foreach (var n in all2)
+        {
+            first.nodeList.GetOrCreate(n); // if a new node is created, the new node will have the first.nodeList
+                        // in its own variable nodeList (instead of second.nodeList)
+        }
+        return new DDMatrix(first.nodeList, w, first.root);
     }
+
 }

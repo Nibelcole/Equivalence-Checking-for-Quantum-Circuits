@@ -26,14 +26,14 @@ while (index < args.Length)
             }
             else
             {
-                throw new ArgumentException("Error: " + args[index] + "is not a valid command-line parameter."
+                throw new ArgumentException("Error: \"" + args[index] + "\" is not a valid command-line parameter."
                 + "See -h or --help for a list of valid parameters.");
             }
             break;
         case "-h":
         case "--help":
             Console.WriteLine("help");
-            break;
+            return;
         case "-v":
         case "--verbose":
             verbose = true;
@@ -42,11 +42,11 @@ while (index < args.Length)
         case "--qubits":
             if (index + 1 >= args.Length)
             {
-                throw new ArgumentException("Error: No argument for " + args[index] + " found.");
+                throw new ArgumentException("Error: No argument for \"" + args[index] + "\" found.");
             }
             else if (!int.TryParse(args[index + 1], out qubits))
             {
-                throw new ArgumentException("Error: Could not parse the argument for " + args[index] + ".");
+                throw new ArgumentException("Error: Could not parse the argument for \"" + args[index] + "\".");
             }
             else if (qubits <= 0)
             {
@@ -57,11 +57,11 @@ while (index < args.Length)
         case "-b":
             if (index + 1 >= args.Length)
             {
-                throw new ArgumentException("Error: No argument for " + args[index] + " found.");
+                throw new ArgumentException("Error: No argument for \"" + args[index] + "\" found.");
             }
             else if (!int.TryParse(args[index + 1], out qubits))
             {
-                throw new ArgumentException("Error: Could not parse the argument for " + args[index] + ".");
+                throw new ArgumentException("Error: Could not parse the argument for \"" + args[index] + "\".");
             }
             else if (qubits < 0)
             {
@@ -73,9 +73,9 @@ while (index < args.Length)
         case "--strategy":
             if (index + 1 >= args.Length)
             {
-                throw new ArgumentException("Error: No argument for " + args[index] + " found.");
+                throw new ArgumentException("Error: No argument for \"" + args[index] + "\" found.");
             }
-            strategy = args[index+1];
+            strategy = args[index + 1];
             index++;
             break;
     }
@@ -84,7 +84,7 @@ while (index < args.Length)
 
 if (qubits == -1)
 {
-    throw new ArgumentException("Error: An argument for -q (the number of qubits) is required. "
+    throw new ArgumentException("Error: An argument for \"-q\" (the number of qubits) is required. "
     + "See -h or --help for more information.");
 }
 if (filePath1 == "" || filePath2 == "")
@@ -108,56 +108,72 @@ else if (b > Math.Pow(2, qubits) - 1)
 var circuit1 = Parser.Parse(filePath1, qubits);
 var circuit2 = Parser.Parse(filePath2, qubits);
 
+Run(verbose, qubits, filePath1, filePath2, circuit1, circuit2, b, strategy);
 
-// simulation
-
-if (b != 0)
+// This allows us to call the funtion for testing purposes without going through the command line.
+static void Run(bool verbose, int qubits, string filePath1, string filePath2, List<DDMatrix> circuit1, List<DDMatrix> circuit2, int b, string strategy)
 {
-    int[] basisStates = new int[b];
-    Random random = new Random();
-    for (int i = 0; i < basisStates.Length; i++)
+    // simulation
+
+    if (b != 0)
     {
-        int r = random.Next() % b;
-        int counter = 3; // the amount of retries that are done in case the newly chosen basis state 
-                         // is already in the list
-                         // This does not guarantee that no value is repeated, but makes it unlikely while 
-                         // not sacrificing too much performance
-        while (basisStates.Contains(r) && counter > 0)
+        int[] basisStates = new int[b];
+        Random random = new Random();
+        for (int i = 0; i < basisStates.Length; i++)
         {
-            r = random.Next() % b;
-            counter--;
+            int r = random.Next() % b;
+            int counter = 3; // the amount of retries that are done in case the newly chosen basis state 
+                             // is already in the list
+                             // This does not guarantee that no value is repeated, but makes it unlikely while 
+                             // not sacrificing too much performance
+            while (basisStates.Contains(r) && counter > 0)
+            {
+                r = random.Next() % b;
+                counter--;
+            }
         }
+
+        for (int i = 0; i < basisStates.Length; i++)
+        {
+            var res = Simulator.Simulate(circuit1, circuit2, basisStates[i], (int)Math.Pow(2, qubits));
+            if (!res.Item1)
+            {
+                Console.WriteLine("------------------------\nResult: The two circuits are not equal. "
+                + "One simulation resulted in a counterexample:");
+                Console.WriteLine("\tInput: |" + i + "〉\n\t"
+                + "Result from file \"" + filePath1 + "\": " + res.Item2.ToString() + "\n\t"
+                + "Result from file \"" + filePath2 + "\": " + res.Item3.ToString() + "\n"
+                );
+                return;
+            }
+        }
+        Console.WriteLine("No simulation resulted in a counterexample. Continuing by proving the circuits are equal.");
+    }
+    else
+    {
+        Console.WriteLine("Skipping simulation, as -b is zero. Continuing by proving the circuits are equal.");
     }
 
-    for (int i = 0; i < basisStates.Length; i++)
+
+    // equivalence checking (proving G --> I <-- G' is equal to the Identity matrix)
+
+    int check = EQChecker.Check(circuit1, circuit2, strategy, (int)Math.Pow(2, qubits));
+
+    if (check == 1)
     {
-        var res = Simulator.Simulate(circuit1, circuit2, basisStates[i], (int)Math.Pow(2, qubits));
-        if (!res.Item1)
-        {
-            Console.WriteLine("------------------------\nResult: The two circuits are not equal. "
-            + "One simulation resulted in a counterexample:");
-            Console.WriteLine("\tInput: |" + i + "〉\n\t"
-            + "Result from file \"" + filePath1 + "\": " + res.Item2.ToString() + "\n\t"
-            + "Result from file \"" + filePath2 + "\": " + res.Item3.ToString() + "\n"
-            );
-            return;
-        }
+        Console.WriteLine("------------------------\nResult: The two circuits are exactly equal. \n\t"
+                + "G --> I <-- G\' is equal to the Identity matrix");
     }
-    Console.WriteLine("No simulation resulted in a counterexample. Continuing by proving the circuits are equal.");
-} else
-{
-    Console.WriteLine("Skipping simulation, as -b is zero. Continuing by proving the circuits are equal.");
-}
+    else if (check == 2)
+    {
+        Console.WriteLine("------------------------\nResult: The two circuits are equivalent. \n\t"
+                + "G --> I <-- G\' only differs by a global phase from the Identity matrix of the same size");
+    }
+    else
+    {
+        Console.WriteLine("------------------------\nResult: The two circuits are not equal. \n\t"
+                + "G --> I <-- G\' is not equal to the Identity matrix");
+    }
 
 
-// equivalence checking (proving G --> I <-- G' is equal to the Identity matrix)
-
-if (EQChecker.Check(circuit1,circuit2, strategy, (int)Math.Pow(2, qubits)))
-{
-    Console.WriteLine("------------------------\nResult: The two circuits are equal. "
-            + "G --> I <-- G\' is equal to the Identity matrix");
-} else
-{
-    Console.WriteLine("------------------------\nResult: The two circuits are not equal. "
-            + "G --> I <-- G\' is not equal to the Identity matrix");
 }
