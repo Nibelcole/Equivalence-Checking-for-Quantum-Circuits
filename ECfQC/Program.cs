@@ -32,7 +32,7 @@ while (index < args.Length)
             break;
         case "-h":
         case "--help":
-            Console.WriteLine("help");
+            PrintHelp();
             return;
         case "-v":
         case "--verbose":
@@ -176,4 +176,49 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
     }
 
 
+}
+
+static void PrintHelp()
+{
+    Console.WriteLine("Usage: ./ECfQC.exe [options] (-q <arg> | --qubits <args>) <filePath1> <filePath2>\n\n"+
+                      "       ./ECfQC.exe (-h | --help)"+
+           "Determines the equality and equivalency of two quantum circuits. \n"+
+           "See README.md for more information.\n\n"+
+           "Options:\n"+
+           "  -h, --help                       displays this help message\n"+
+           "  -v, --verbose                    enables verbose mode which prints out more information during the process\n"+
+           "  -b <arg>                         the number of simulations to run\n"+
+           "                                     The default is the amount of qubits divided by 2 or 1 if \n"+
+           "                                     the argument given for -q is 1\n"+
+           "                                     if <arg> is 0, simulation is skipped\n"+
+           "                                     Note that it is possible for the program to run a smaller amount of \n"+
+           "                                     simulations if a distinct random value can't be generated in a certain \n"+
+           "                                     number of tries\n"+
+           "  -s <arg>, --strategy <args>      the strategy to use when conducting G --> I <-- G'\n"+
+           "                                     The default is \"look-ahead\"\n"+
+           "                                     Available options are \"alternating\", \"alternating-balanced\" and \n"+
+           "                                     \"look-ahead\"\n"+
+           "                                     For more information, see README.md\n"+
+           "Required arguments:\n"+
+           "  -q <arg>, --qubits <args>        the number of qubits to be simulated\n"+
+           "  <filepath1>, <filepath2>         path to a txt-file that contains a representation of a quantum circuit \n"+
+           "                                     as a list of instruction divided by linebreaks (Environment.NewLine is \n"+
+           "                                     used to differentiate between operating systems)\n"+
+           "                                     Note that empty files are interpreted as a circuit returning the identity\n"+
+           "    Instruction usage:\n"+
+           "      <gate> [<q1>] [<q2>] [<q3>]\n"+
+           "    Instruction parameters\n"+
+           "      <gate>                       the gate to apply\n"+
+           "                                     Available options are \"id\" (Identity), \"pX\" (Pauli-X), \n"+
+           "                                     \"pY\" (Pauli-Y), \"pZ\" (Pauli-Z), \"h\" (Hadamard), \"cnot\" (C-Not), \n"+
+           "                                     \"sw\" (Swap) and \"t\" (Toffoli)\n"+
+           "                                     Depending on the type of gate, either 0, 1, 2 or 3 arguments have \n"+
+           "                                     to be given\n"+
+           "                                     Note that the only gate with 0 arguments is the identity\n"+
+           "                                     For more information, see README.md\n"+
+           "      <q1>, <q2>, <q3>             the qubits on which the given gate should be applied to\n"+
+           "                                     Note that giving arguments with large distances between them can \n"+
+           "                                     impact performance\n\n"+
+           "More information can be obtained by reading the README.md or the seminar paper/presentation made for this project"
+           );
 }

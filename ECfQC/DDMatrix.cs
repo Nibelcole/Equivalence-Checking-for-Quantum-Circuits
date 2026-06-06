@@ -10,28 +10,28 @@ public partial class DDMatrix
 {
     public static readonly Dictionary<string, Tuple<DDMatrix, int>> gates = new() {
         {"id", new(Identity(1), 0)},
-        {"pauliX", new(new DDMatrix(new Complex[,]
+        {"pX", new(new DDMatrix(new Complex[,]
             {
                 {0, 1},
                 {1,0}
             }
             ), 1)
         },
-        {"pauliY", new(new DDMatrix(new Complex[,]
+        {"pY", new(new DDMatrix(new Complex[,]
             {
                 {0, -Complex.ImaginaryOne},
                 {Complex.ImaginaryOne,0}
             }
             ), 1)
         },
-        {"pauliX", new(new DDMatrix(new Complex[,]
+        {"pZ", new(new DDMatrix(new Complex[,]
             {
                 {1, 0},
                 {0,-1}
             }
             ), 1)
         },
-        {"hadamard", new(new DDMatrix(new Complex[,]
+        {"h", new(new DDMatrix(new Complex[,]
             {
                 {1/Math.Sqrt(2), 1/Math.Sqrt(2)},
                 {1/Math.Sqrt(2),-1/Math.Sqrt(2)}
@@ -47,7 +47,7 @@ public partial class DDMatrix
             }
             ), 2)
         },
-        {"swap", new(new DDMatrix(new Complex[,]
+        {"sw", new(new DDMatrix(new Complex[,]
             {
                 {1,0,0,0},
                 {0,0,1,0},
@@ -56,7 +56,7 @@ public partial class DDMatrix
             }
             ), 2)
         },
-        {"toffoli", new(new DDMatrix(new Complex[,]
+        {"t", new(new DDMatrix(new Complex[,]
             {
                 {1,0,0,0,0,0,0,0},
                 {0,1,0,0,0,0,0,0},
