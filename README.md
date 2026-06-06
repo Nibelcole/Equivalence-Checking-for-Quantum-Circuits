@@ -23,7 +23,7 @@ The compiled binary can then be found under "\bin\Debug\net9.0\EDfQC.exe" (if bu
 Using the latter is recommended.
 
 ### Usage
-```shell
+```
 ./ECfQC.exe [options] (-q <arg> | --qubits <args>) <filePath1> <filePath2>
 ./ECfQC.exe (-h | --help)
 ```
@@ -60,8 +60,8 @@ The default strategy is "look-ahead".
 ECfQC requires the quantum circuits it compares to be provided in separate textfiles using their own syntax. Each circuit is seen as a sequential list of quantum gates.
 
 Each line has to be formatted as follows:
-```shell
-<gate> [<q1>] [<q2\>] [<q3\>]
+```
+<gate> [<q1>] [<q2>] [<q3>]
 ```
 Here \<gate\> is the id of the gate that should be applied, while \<q1\>, \<q2\> and \<q3\> denote the qubits, that this gate should be applied on.
 
@@ -69,14 +69,14 @@ The full list of gates available by default and the number of arguments they tak
 
 | Gate | Id | Matrix | Number of arguments 
 | - | - | - | - |
-| Identity | id | ```math \begin{bmatrix}1&0&\cdot\cdot\cdot&0 \\0&1&\cdot\cdot\cdot&0 \\ \vdots&\vdots&\ddots&\vdots  \\0&0&\cdot\cdot\cdot&1 \end{bmatrix}``` | 0 | An empty file is interpreted as if it contains and identity gate |
-| Pauli-X | pX | $$\begin{bmatrix}0 &1 \\1 & 0 \end{bmatrix}$$ | 1 | 
-| Pauli-Y | pY | $$\begin{bmatrix}0 &-i \\i & 0 \end{bmatrix}$$ | 1 | 
-| Pauli-Z | pZ | $$\begin{bmatrix}1 &0 \\0 & -1 \end{bmatrix}$$ | 1 | 
-| Hadamard | h | $$\frac{1}{\sqrt{2}}\begin{bmatrix}1 &1 \\1 & 1 \end{bmatrix}$$ | 1 | 
-| C-Not | cnot | $$\begin{bmatrix}1&0&0&0 \\0&1&0&0 \\ 0&0&0&1 \\0&0&1&0 \end{bmatrix}$$ | 2 | 
-| Swap | sw | $$\begin{bmatrix}1&0&0&0 \\0&0&1&0 \\ 0&1&0&0 \\0&0&0&1 \end{bmatrix}$$ | 2 | 
-| Toffoli | t | $$\begin{bmatrix}1&0&0&0&0&0&0&0 \\0&1&0&0&0&0&0&0 \\ 0&0&1&0&0&0&0&0 \\0&0&0&1&0&0&0&0\\0&0&0&0&1&0&0&0\\0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&1\\0&0&0&0&0&0&1&0 \end{bmatrix}$$ | 3 | 
+| Identity | id | $`\begin{bmatrix}1&0&\cdots&0 \\0&1&\cdots&0 \\ \vdots&\vdots&\ddots&\vdots  \\0&0&\cdots&1 \end{bmatrix}`$ | 0 | An empty file is interpreted as if it contains and identity gate |
+| Pauli-X | pX | $`\begin{bmatrix} 0 & 1 \\ 1 & 0 \end{bmatrix}`$ | 1 | 
+| Pauli-Y | pY | $`\begin{bmatrix}0 &-i \\i & 0 \end{bmatrix}`$ | 1 | 
+| Pauli-Z | pZ | $`\begin{bmatrix}1 &0 \\0 & -1 \end{bmatrix}`$ | 1 | 
+| Hadamard | h | $`\frac{1}{\sqrt{2}}\begin{bmatrix}1 &1 \\1 & 1 \end{bmatrix}`$ | 1 | 
+| C-Not | cnot | $`\begin{bmatrix}1&0&0&0 \\0&1&0&0 \\ 0&0&0&1 \\0&0&1&0 \end{bmatrix}`$ | 2 | 
+| Swap | sw | $`\begin{bmatrix}1&0&0&0 \\0&0&1&0 \\ 0&1&0&0 \\0&0&0&1 \end{bmatrix}`$ | 2 | 
+| Toffoli | t | $`\begin{bmatrix}1&0&0&0&0&0&0&0 \\0&1&0&0&0&0&0&0 \\ 0&0&1&0&0&0&0&0 \\0&0&0&1&0&0&0&0\\0&0&0&0&1&0&0&0\\0&0&0&0&0&1&0&0\\0&0&0&0&0&0&0&1\\0&0&0&0&0&0&1&0 \end{bmatrix}`$ | 3 | 
 
 It is possible to add more gates by appending their id together with their gate matrices to DDMatrix.gates (and rebuilding the code). However, only gates with 1-3 arguments are supported and $S\cdot S^H = \mathbb{I}$ has to hold for any gate matrix S. Specifically gates with 0 arguments other than the identity gate are _not_ supported.
 
