@@ -117,9 +117,9 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
 
     if (b != 0)
     {
-        int[] basisStates = new int[b];
+        HashSet<int> basisStates = new (b);
         Random random = new Random();
-        for (int i = 0; i < basisStates.Length; i++)
+        for (int i = 0; i < basisStates.Count; i++)
         {
             int r = random.Next() % b;
             int counter = 3; // the amount of retries that are done in case the newly chosen basis state 
@@ -131,16 +131,17 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
                 r = random.Next() % b;
                 counter--;
             }
+            basisStates.Add(r);
         }
 
-        for (int i = 0; i < basisStates.Length; i++)
+        foreach (int v in basisStates)
         {
-            var res = Simulator.Simulate(circuit1, circuit2, basisStates[i], (int)Math.Pow(2, qubits));
+            var res = Simulator.Simulate(circuit1, circuit2, v, (int)Math.Pow(2, qubits));
             if (!res.Item1)
             {
                 Console.WriteLine("------------------------\nResult: The two circuits are not equal. "
                 + "One simulation resulted in a counterexample:");
-                Console.WriteLine("\tInput: |" + i + "〉\n\t"
+                Console.WriteLine("\tInput: |" + v + "〉\n\t"
                 + "Result from file \"" + filePath1 + "\": " + res.Item2.ToString() + "\n\t"
                 + "Result from file \"" + filePath2 + "\": " + res.Item3.ToString() + "\n"
                 );

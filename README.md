@@ -7,8 +7,7 @@ The aim of this project, paper and presentation is the implementation of an equi
 
 Do achieve this, this project implements Quantum Decision Diagrams (QDDs), a simulator, which attempts to find counterexamples to prove non-equivalence by simulating quantum circuits with randomly chosen basis states as input, and an EQChecker calculating $G \rightarrow \mathbb{I} \leftarrow G'$ which can then prove or disprove the equality or equivalence of two quantum circuits.
 
-## Installation and Usage
-### Installation
+## Installation
 This project requires .Net 9.0.
 
 After cloning the project from GitHub, open a terminal and navigate into the topmost folder ("Equivalence-Checking-for-Quantum-Circuits"). To compile the program, navigate into "ECfQC" and run either
@@ -19,10 +18,11 @@ or
 ```shell
 dotnet publish
 ```
-The compiled binary can then be found under "\bin\Debug\net9.0\EDfQC.exe" (if build is used) or "\bin\Debug\net9.0\publish\EDfQC.exe" (if publish is used). 
+The compiled binary can then be found under "\bin\Debug\net9.0\EDfQC.exe" (if build is used) or "\bin\Release\net9.0\publish\EDfQC.exe" (if publish is used). 
 Using the latter is recommended.
+Note that everything in the same folder as the .exe-file is required for it to run, meaning that if the .exe-file is moved, the other files need to be moved into the same folder.
 
-### Usage
+## Usage
 ```
 ./ECfQC.exe [options] (-q <arg> | --qubits <args>) <filePath1> <filePath2>
 ./ECfQC.exe (-h | --help)
@@ -56,7 +56,7 @@ The argument `-s <arg>` or `--strategy <arg>` is used to determine the strategy 
 The default strategy is "look-ahead".
 
 
-#### Files
+### Files
 ECfQC requires the quantum circuits it compares to be provided in separate textfiles using their own syntax. Each circuit is seen as a sequential list of quantum gates.
 
 Each line has to be formatted as follows:
