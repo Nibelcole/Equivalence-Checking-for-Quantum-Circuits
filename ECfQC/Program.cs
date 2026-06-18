@@ -1,13 +1,15 @@
 ﻿
 // parsing command-line arguments
 
+using System.Text;
+
 Console.WriteLine("Reading command line parameters.");
 
 bool verbose = false;
 int qubits = -1;
 string filePath1 = "";
 string filePath2 = "";
-int b = -1; // the number of simulations; default is max(qubits/2, 1) (determined after qubits has been read from command-line)
+int b = -1; // the number of simulations; default is qubits (determined after qubits has been read from command-line)
 string strategy = "look-ahead";
 
 int index = 0;
@@ -51,6 +53,10 @@ while (index < args.Length)
             else if (qubits <= 0)
             {
                 throw new ArgumentException("Error: Number of qubits must be a positive integer.");
+            } else if (qubits >= 31)
+            {
+                throw new ArgumentException("Error: Number of qubits must not be more than 30. "+
+                "This is because 2^31 and values above that cannot be stored in an int.");
             }
             index++;
             break;
@@ -59,11 +65,11 @@ while (index < args.Length)
             {
                 throw new ArgumentException("Error: No argument for \"" + args[index] + "\" found.");
             }
-            else if (!int.TryParse(args[index + 1], out qubits))
+            else if (!int.TryParse(args[index + 1], out b))
             {
                 throw new ArgumentException("Error: Could not parse the argument for \"" + args[index] + "\".");
             }
-            else if (qubits < 0)
+            else if (b < 0)
             {
                 throw new ArgumentException("Error: Amount of simulations must be a positive integer or zero.");
             }
@@ -94,9 +100,9 @@ if (filePath1 == "" || filePath2 == "")
 }
 if (b == -1)
 {
-    b = Math.Max(qubits / 2, 1);
+    b = qubits;
 }
-else if (b > Math.Pow(2, qubits) - 1)
+else if (b > Math.Pow(2, qubits))
 {
     throw new ArgumentException("Error: There cannot be more simulations than the amount of basis states. " +
     "Note that only basis states are checked and repeating inputs are avoided.");
@@ -110,16 +116,16 @@ var circuit2 = Parser.Parse(filePath2, qubits);
 
 Run(verbose, qubits, filePath1, filePath2, circuit1, circuit2, b, strategy);
 
-// This allows us to call the funtion for testing purposes without going through the command line.
 static void Run(bool verbose, int qubits, string filePath1, string filePath2, List<DDMatrix> circuit1, List<DDMatrix> circuit2, int b, string strategy)
 {
     // simulation
-
+    int basisStatesCount = (int) Math.Pow(2, qubits);
     if (b != 0)
     {
         HashSet<int> basisStates = new (b);
         Random random = new Random();
-        for (int i = 0; i < basisStates.Count; i++)
+        StringBuilder s = new("[ ");
+        for (int i = 0; i < b; i++)
         {
             int r = random.Next() % b;
             int counter = 3; // the amount of retries that are done in case the newly chosen basis state 
@@ -128,15 +134,21 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
                              // not sacrificing too much performance
             while (basisStates.Contains(r) && counter > 0)
             {
-                r = random.Next() % b;
+                r = random.Next(0, basisStatesCount);
                 counter--;
             }
             basisStates.Add(r);
+            s.Append(r+", ");
+        }
+        s.Append("]");
+        if (verbose)
+        {
+            Console.WriteLine($"Created {basisStates.Count} basis states: {s.ToString()}");
         }
 
         foreach (int v in basisStates)
         {
-            var res = Simulator.Simulate(circuit1, circuit2, v, (int)Math.Pow(2, qubits));
+            var res = Simulator.Simulate(circuit1, circuit2, (int)Math.Pow(2, qubits), v);
             if (!res.Item1)
             {
                 Console.WriteLine("------------------------\nResult: The two circuits are not equal. "
@@ -146,6 +158,9 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
                 + "Result from file \"" + filePath2 + "\": " + res.Item3.ToString() + "\n"
                 );
                 return;
+            } else if (verbose)
+            {
+                Console.WriteLine($"For |{v}〉: Both circuits return the same result.");
             }
         }
         Console.WriteLine("No simulation resulted in a counterexample. Continuing by proving the circuits are equal.");
@@ -158,7 +173,7 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
 
     // equivalence checking (proving G --> I <-- G' is equal to the Identity matrix)
 
-    int check = EQChecker.Check(circuit1, circuit2, strategy, (int)Math.Pow(2, qubits));
+    int check = EQChecker.Check(circuit1, circuit2, strategy, (int)Math.Pow(2, qubits), verbose);
 
     if (check == 1)
     {
@@ -189,7 +204,7 @@ static void PrintHelp()
            "  -h, --help                       displays this help message\n"+
            "  -v, --verbose                    enables verbose mode which prints out more information during the process\n"+
            "  -b <arg>                         the number of simulations to run\n"+
-           "                                     The default is the amount of qubits divided by 2 or 1 if \n"+
+           "                                     The default is the amount of qubits\n"+
            "                                     the argument given for -q is 1\n"+
            "                                     if <arg> is 0, simulation is skipped\n"+
            "                                     Note that it is possible for the program to run a smaller amount of \n"+
@@ -202,6 +217,7 @@ static void PrintHelp()
            "                                     For more information, see README.md\n"+
            "Required arguments:\n"+
            "  -q <arg>, --qubits <args>        the number of qubits to be simulated\n"+
+           "                                     Note that since integers are used, <args> should be < 31\n"+
            "  <filepath1>, <filepath2>         path to a txt-file that contains a representation of a quantum circuit \n"+
            "                                     as a list of instruction divided by linebreaks (Environment.NewLine is \n"+
            "                                     used to differentiate between operating systems)\n"+

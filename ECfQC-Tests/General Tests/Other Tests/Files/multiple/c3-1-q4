@@ -1,0 +1,13 @@
+h 0
+h 1 
+pX 0
+pY 0
+
+cnot 0 1
+
+pY 3
+t 3
+
+cnot 2 3
+
+tof 1 2 3

@@ -1,4 +1,5 @@
 
+
 public static class Parser
 {
     public static List<DDMatrix> Parse(string path, int q)
@@ -16,8 +17,14 @@ public static class Parser
             throw new ArgumentException("Error: While parsing " + path + ", the following exception occured:" + e.Message);
         }
         string[] lines = str.Split([Environment.NewLine], StringSplitOptions.RemoveEmptyEntries);
-
         List<DDMatrix> list = new(lines.Length);
+        
+        if (lines.Length == 0)
+        {
+            list.Add(DDMatrix.Extend(DDMatrix.gates["id"].Item1.Copy(), q));
+            return list;
+        }
+
         for (int i = 0; i < lines.Length; i++)
         {
             string[] parts = lines[i].Split(" ", StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
@@ -73,7 +80,7 @@ public static class Parser
                 case 1: t = DDMatrix.Extend(t, q, arguments[0]); break;
                 case 2: t = DDMatrix.Extend(t, q, arguments[0], arguments[1]); break;
                 case 3: t = DDMatrix.Extend(t, q, arguments[0], arguments[1], arguments[2]); break;
-                default: throw new Exception("Internal Error"); // This should not happen and is there for debugging purposes
+                default: throw new Exception("Internal Error: A gate in DDMatrix.gates has more than three arguments."); 
             }
             list.Add(t);
 

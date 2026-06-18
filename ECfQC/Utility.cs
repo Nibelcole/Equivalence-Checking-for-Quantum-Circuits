@@ -4,7 +4,7 @@ using System.Numerics;
 
 public static class Utility
 {
-    public const double delta = 1e-12;
+    public const double delta = 1e-11;
 
     /// <summary>
     /// Returns true if and only if the two given Complex numbers differ by only delta.

@@ -12,7 +12,7 @@ public static class Simulator
     /// <br/><br/>
     /// input refers to the basis state |input〉. It is assumed that first.size == second.size and first.size > input.
     /// </summary>
-    public static Tuple<bool, Complex[], Complex[]> Simulate(List<DDMatrix> first, List<DDMatrix> second, int input, int length)
+    public static Tuple<bool, Complex[], Complex[]> Simulate(List<DDMatrix> first, List<DDMatrix> second, int length, int input)
     {
         if (first.Count == 0)
         {
@@ -40,7 +40,7 @@ public static class Simulator
     /// <summary>
     /// Executes half of one simulation run and returns the result. A helper function for Simulate().
     /// </summary>
-    private static Complex[] SimulateSingle(List<DDMatrix> first, int length, int input)
+    public static Complex[] SimulateSingle(List<DDMatrix> first, int length, int input) // public for testing/debugging purposes
     {
         Complex[] value = new Complex[length];
         value[input] = Complex.One;

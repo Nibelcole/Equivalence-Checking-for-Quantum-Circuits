@@ -1,5 +1,4 @@
 using System.ComponentModel.Design.Serialization;
-using System.IO.Pipelines;
 using System.Numerics;
 using static Utility;
 
@@ -9,45 +8,60 @@ using static Utility;
 public partial class DDMatrix
 {
     public static readonly Dictionary<string, Tuple<DDMatrix, int>> gates = new() {
-        {"id", new(Identity(1), 0)},
-        {"pX", new(new DDMatrix(new Complex[,]
+        // We use the same conventions/matrices as Qiskit to make testing easier
+        {"id", new(Identity(1), 0)}, // Identity
+        {"pX", new(new DDMatrix(new Complex[,] // Pauli-X
             {
                 {0, 1},
                 {1,0}
             }
             ), 1)
         },
-        {"pY", new(new DDMatrix(new Complex[,]
+        {"pY", new(new DDMatrix(new Complex[,] // Pauli-Y
             {
                 {0, -Complex.ImaginaryOne},
                 {Complex.ImaginaryOne,0}
             }
             ), 1)
         },
-        {"pZ", new(new DDMatrix(new Complex[,]
+        {"pZ", new(new DDMatrix(new Complex[,] // Pauli-Z
             {
                 {1, 0},
                 {0,-1}
             }
             ), 1)
         },
-        {"h", new(new DDMatrix(new Complex[,]
+        {"h", new(new DDMatrix(new Complex[,] // Hadamard
             {
                 {1/Math.Sqrt(2), 1/Math.Sqrt(2)},
                 {1/Math.Sqrt(2),-1/Math.Sqrt(2)}
             }
             ), 1)
         },
-        {"cnot", new(new DDMatrix(new Complex[,]
+        {"s", new(new DDMatrix(new Complex[,] // S gate
+            {
+                {1, 0},
+                {0,new(0,1)}
+            }
+            ), 1)
+        },
+        {"t", new(new DDMatrix(new Complex[,] // T gate
+            {
+                {1, 0},
+                {0,Complex.Exp(Complex.ImaginaryOne * Math.PI / 4.0)}
+            }
+            ), 1)
+        },
+        {"cnot", new(new DDMatrix(new Complex[,] // Controlled-Not
             {
                 {1,0,0,0},
-                {0,1,0,0},
                 {0,0,0,1},
-                {0,0,1,0}
+                {0,0,1,0},
+                {0,1,0,0}
             }
             ), 2)
         },
-        {"sw", new(new DDMatrix(new Complex[,]
+        {"sw", new(new DDMatrix(new Complex[,] // Swap
             {
                 {1,0,0,0},
                 {0,0,1,0},
@@ -56,21 +70,21 @@ public partial class DDMatrix
             }
             ), 2)
         },
-        {"t", new(new DDMatrix(new Complex[,]
+        {"tof", new(new DDMatrix(new Complex[,] // Toffoli
             {
                 {1,0,0,0,0,0,0,0},
                 {0,1,0,0,0,0,0,0},
                 {0,0,1,0,0,0,0,0},
-                {0,0,0,1,0,0,0,0},
+                {0,0,0,0,0,0,0,1},
                 {0,0,0,0,1,0,0,0},
                 {0,0,0,0,0,1,0,0},
-                {0,0,0,0,0,0,0,1},
                 {0,0,0,0,0,0,1,0},
+                {0,0,0,1,0,0,0,0},
             }
             ), 3)
         },
     }; // the int shows the number of qubits this gate is applied to
-    
+
     public readonly int qubits;
 
     public Complex rootWeight;
@@ -78,19 +92,30 @@ public partial class DDMatrix
 
     public readonly DDNodeList nodeList = new DDNodeList();
 
-    public DDMatrix(DDNodeList nodeList, Complex rootWeight, DDNode root)
+    public DDMatrix(DDNodeList nodeList, Complex rootWeight, DDNode root, int qubits)
     {
         this.nodeList = nodeList;
         this.rootWeight = rootWeight;
         this.root = root;
+        this.qubits = qubits;
     }
 
-    public DDMatrix(Complex[,] matrix) // it is assumed that matrix is quadratic
+    public DDMatrix(Complex[,] matrix)
     {
+        if (matrix.GetLength(0) != matrix.GetLength(1))
+        {
+            throw new Exception("Internal Error: Matrix is not square.");
+        }
+        if ((matrix.GetLength(0) & (matrix.GetLength(0) - 1)) != 0)
+        {
+            throw new Exception("Internal Error: Matrix dimension is not a power of two.");
+        }
+
         this.qubits = (int)Math.Log2(matrix.GetLength(0));
         this.nodeList = new();
-        (rootWeight, root) = DDNode.Construct(nodeList, matrix, 0, matrix.GetLength(0), 
+        (rootWeight, root) = DDNode.Construct(nodeList, matrix, 0, matrix.GetLength(0),
             0, matrix.GetLength(1), qubits);
+        nodeList = root.RecreateNodeList(new());
     }
 
     /// <summary>
@@ -99,7 +124,7 @@ public partial class DDMatrix
     public DDMatrix Copy()
     {
         DDNodeList list = new();
-        return new DDMatrix(list, rootWeight, root.Copy(list));
+        return new DDMatrix(list, rootWeight, root.Copy(list), qubits);
     }
 
     /// <summary>
@@ -108,7 +133,7 @@ public partial class DDMatrix
     public static DDMatrix Identity(int qubits)
     {
         DDNodeList list = new();
-        return new DDMatrix(list, 1, DDNode.Identity(list, qubits));
+        return new DDMatrix(list, 1, DDNode.Identity(list, qubits), qubits);
     }
 
     /// <summary>
@@ -129,22 +154,7 @@ public partial class DDMatrix
             return 1;
         }
 
-        // according to the following equation e^(i*alpha)
-        // == cos(alpha) + i*sin(alpha) 
-        // == Re(e^(i*alpha))+ Im(e^(i*alpha))
-        // with alpha = [0, 2*pi)
-        // ==> there is an alpha with e^(i*alpha) == global phase
-        // if and only if arccos(Re(e^(i*alpha))) == arcsin(Im(e^(i*alpha)))
-        double re = Math.Acos(rootWeight.Real);
-        double im = Math.Asin(rootWeight.Imaginary);
-        if (double.IsNaN(re) || double.IsNaN(im))
-        {
-            return 0;
-        }
-        // re and im need to be equal
-        // We "misuse" CompareComplex here since it provides the same functionality of comparing 
-        // double values with a delta, so we wont have to implement a separate CompareDouble function.
-        if (CompareComplex(new(re, im), new(im, re)))
+        if (CompareComplex(Complex.Abs(rootWeight), Complex.One))
         {
             return 2;
         }
@@ -165,18 +175,22 @@ public partial class DDMatrix
     /// <summary>
     /// Changes this DDMatrix, so it becomes the conjugate-transposed of itself.
     /// </summary>
-    public void ConjugateTransposed()
+    public static DDMatrix ConjugateTransposed(DDMatrix matrix)
     {
-        foreach (var node in nodeList.GetAll())
+        matrix = matrix.Copy();
+        Dictionary<DDNode, Complex> renormalizedNodes = new();
+        matrix.rootWeight *= matrix.root.Transposed(renormalizedNodes);
+
+        foreach (DDNode d in renormalizedNodes.Keys)
         {
-            for (int i = 0; i<4;i++)
+            for (int i = 0; i < 4; i++)
             {
-                node.weights[i] = Complex.Conjugate(node.weights[i]);
+                d.weights[i] = Complex.Conjugate(d.weights[i]);
             }
-            (node.weights[1], node.weights[2]) = (node.weights[2], node.weights[1]);
-            (node.next[1], node.next[2]) = (node.next[2], node.next[1]);
         }
-        rootWeight = Complex.Conjugate(rootWeight);
+
+        matrix.rootWeight = Complex.Conjugate(matrix.rootWeight);
+        return matrix;
     }
 
     /// <summary>
@@ -185,9 +199,15 @@ public partial class DDMatrix
     /// </summary>
     public static DDMatrix Multiply(DDMatrix first, DDMatrix second)
     {
+        if (first.qubits != second.qubits) // for debugging purposes
+        {
+            throw new Exception("Internal Error: The given DDMatrices are not of" +
+            " equal size: first: " + first.qubits + ", second: " + second.qubits);
+        }
         DDNodeList list = new();
-        var (a,b) = DDNode.Multiply(list, first.root,second.root);
-        return new DDMatrix(list, a*first.rootWeight*second.rootWeight, b);
+        var (a, b) = DDNode.Multiply(list, new(first.rootWeight, first.root), new(second.rootWeight, second.root));
+        // This prevents intermediate results from being in the nodeList, despite not being in the QDD itself.
+        return new DDMatrix(b.RecreateNodeList(new()), a, b, first.qubits);
     }
 
     /// <summary>
@@ -196,10 +216,15 @@ public partial class DDMatrix
     /// </summary>
     public static Complex[] Multiply(Complex[] first, DDMatrix second)
     {
-        var result = DDNode.Multiply(first, second.root,0,first.Length);
-        for (int i = 0;i<result.Length;i++)
+        if (((int)Math.Log2(first.Length)) != second.qubits) // for debugging purposes
         {
-            result[i] = result[i]*second.rootWeight;
+            throw new Exception("Internal Error: The given values are not of" +
+            " equal size: first: " + Math.Log2(first.Length) + ", second: " + second.qubits);
+        }
+        var result = DDNode.Multiply(first, second.root, 0, first.Length);
+        for (int i = 0; i < result.Length; i++)
+        {
+            result[i] = result[i] * second.rootWeight;
         }
         return result;
     }
@@ -210,10 +235,15 @@ public partial class DDMatrix
     /// </summary>
     public static Complex[] Multiply(DDMatrix first, Complex[] second)
     {
-        var result = DDNode.Multiply(first.root, second,0,second.Length);
-        for (int i = 0;i<result.Length;i++)
+        if (first.qubits != ((int)Math.Log2(second.Length))) // for debugging purposes
         {
-            result[i] = result[i]*first.rootWeight;
+            throw new Exception("Internal Error: The given values are not of" +
+            " equal size: first: " + first.qubits + ", second: " + Math.Log2(second.Length));
+        }
+        var result = DDNode.Multiply(first.root, second, 0, second.Length);
+        for (int i = 0; i < result.Length; i++)
+        {
+            result[i] = result[i] * first.rootWeight;
         }
         return result;
     }
@@ -223,16 +253,20 @@ public partial class DDMatrix
     /// 
     /// <br/><br/>
     /// If a is not given, the identity matrix of the correct size will be returned instead.
-    /// m is consumed by this operation. Do not use it afterwards.
     /// </summary>
     public static DDMatrix Extend(DDMatrix m, int qubits, int a = -1, int b = -1, int c = -1)
     {
+        if ((a == b && a != -1) || (b == c && b != -1) || (a == c && a != -1))
+        {
+            throw new Exception("Internal Error: two equal arguments were given to Extend(), which should " +
+            "have been caught by the Parser.");
+        }
         if (a == -1) // zero arguments
         {
             return Identity(qubits);
         }
         // one argument or (two arguments and no permutation is required) or (three arguments and no permutation is required)
-        if (b == -1 || a == b - 1 || (a == b - 1 && b == c - 1))
+        if (b == -1 || (a == b - 1 && c == -1) || (a == b - 1 && b == c - 1))
         {
             DDMatrix result;
             int i = 1;
@@ -241,6 +275,7 @@ public partial class DDMatrix
                 result = m;
                 if (b != -1)
                 {
+                    i++;
                     if (c != -1)
                     {
                         i++;
@@ -249,7 +284,7 @@ public partial class DDMatrix
             }
             else
             {
-                result = Identity(qubits);
+                result = Identity(1);
             }
 
             for (; i < qubits; i++)
@@ -260,6 +295,7 @@ public partial class DDMatrix
                     next = m;
                     if (b != -1)
                     {
+                        i++;
                         if (c != -1)
                         {
                             i++;
@@ -268,127 +304,114 @@ public partial class DDMatrix
                 }
                 else
                 {
-                    next = Identity(qubits);
+                    next = Identity(1);
                 }
-                result = TensorProduct(result, next);
+                result = TensorProduct(next, result);
             }
             return result;
         }
 
+        List<int> targets = [a, b];
+        if (b == -1) {throw new Exception("b is -1");}
+        
+        if (c != -1)
+            targets.Add(c);
+
+        if (targets.Count != m.qubits)
+        {
+            throw new Exception($"Internal Error: The given number of arguments {targets.Count} doesn't "+
+            $" match the matrix ({m.qubits}), " +
+            "meaning something is wrong with DDMatrix.gates or the parser.");
+        }
+
+        int[] position = Enumerable.Range(0, qubits).ToArray();
+        int min = targets.Min();
+
         List<DDMatrix> swapGates = new();
-        if (c == -1) // two arguments and permutation is required
-        {
-            if (a < b) // move b to a
-            {
-                while (a != b - 1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, b - 1, b));
-                    b--;
-                }
-            }
-            else // move a to b
-            {
-                while (a != b - 1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, a-1, a));
-                    a--;
-                }
-                b++;
-            }
-        }
-        else // three arguments and permutation is required
-        {
 
-            if (a < b) // move b to a+1
+        for (int i = 0; i < targets.Count; i++)
+        {
+            int desiredPosition = min + i;
+
+            int current = Array.IndexOf(position, targets[i]);
+
+            while (current > desiredPosition)
             {
-                if (c > a && c < b)
-                {
-                    c++;
-                }
-                while (a != b - 1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, b - 1, b));
-                    b--;
-                }
-            }
-            else // move a to b-1
-            {
-                if (c < a && c > b)
-                {
-                    c++;
-                }
-                while (a != b - 1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, a - 1, a));
-                    a--;
-                }
-                b++;
+                swapGates.Add(Extend(gates["sw"].Item1.Copy(), qubits, current - 1, current));
+
+                (position[current - 1], position[current]) = (position[current], position[current - 1]);
+                current--;
             }
 
-            if (c<a) // move c to a+2 from below
+            while (current < desiredPosition)
             {
-                while (c != b +1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, c, c+1));
-                    c++;
-                }
-                a--;
-                b--;
-            } else // move c to a+2 from above
+                swapGates.Add(Extend(gates["sw"].Item1.Copy(), qubits, current - 1, current));
+
+                (position[current], position[current + 1]) = (position[current + 1], position[current]);
+                current++;
+            }
+        }
+
+        DDMatrix modifiedM = null!;
+
+        for (int q = 0; q < qubits; q++)
+        {
+            DDMatrix next;
+
+            if (q == min)
             {
-                while (c != b +1)
-                {
-                    swapGates.Add(Extend(gates["swap"].Item1.Copy(), qubits, c-1, c));
-                    c--;
-                }
+                next = m;
+                q += m.qubits - 1;
+            }
+            else
+            {
+                next = Identity(1);
             }
 
+            if (modifiedM == null)
+            {
+                modifiedM = next;
+            } else {
+                modifiedM = TensorProduct(next, modifiedM);
+            }
         }
-        DDMatrix modifiedM = Extend(m, qubits, a, b);
-        foreach (var s in swapGates)
+
+        for (int i = swapGates.Count - 1; i >= 0; i--)
         {
-            modifiedM = Multiply(s, modifiedM);
-            s.ConjugateTransposed();
+            // Since the inverse of a swap gate is itself, ConjugateTransposed() isn't needed
+            modifiedM = Multiply(swapGates[i], modifiedM);
+            modifiedM = Multiply(modifiedM, swapGates[i]);
         }
-        foreach (var s in swapGates)
-        {
-            modifiedM = Multiply(modifiedM, s);
-        }
+
         return modifiedM;
     }
 
     /// <summary>
-    /// Returns the tensor product of two matrices. 
-    /// 
-    /// <br/><br/>
-    /// The two DDMatrices are consumed in the process. 
-    /// Do not use them afterwards.
-    /// 
-    /// <br/><br/>
-    /// Note: We do not allow multiple DDMatrices to use the same DDNodes, which is why second is also 
-    /// seen as "consumed", despite the fact that it itself is not changed.
+    /// Returns the tensor product of two matrices. This does not consume the inputs.
     /// </summary>
     public static DDMatrix TensorProduct(DDMatrix first, DDMatrix second)
     {
         Complex w = first.rootWeight * second.rootWeight;
-        var all = first.nodeList.GetAll();
-        foreach (var n in all)
+        if (first.root == DDNode.zero || second.root == DDNode.zero || CompareComplex(w, 0))
         {
-            for (int i = 0; i < 4; i++)
-            {
-                if (n.next[i] == DDNode.one)
-                {
-                    n.next[i] = second.root;
-                }
-            }
+            return new DDMatrix(new(), 0, DDNode.zero, first.qubits + second.qubits);
         }
-        var all2 = second.nodeList.GetAll();
-        foreach (var n in all2)
+        else if (first.root == DDNode.one)
         {
-            first.nodeList.GetOrCreate(n); // if a new node is created, the new node will have the first.nodeList
-                        // in its own variable nodeList (instead of second.nodeList)
+            var t = second.Copy();
+            t.rootWeight = w;
+            return t;
         }
-        return new DDMatrix(first.nodeList, w, first.root);
+        else if (second.root == DDNode.one)
+        {
+            var t = first.Copy();
+            t.rootWeight = w;
+            return t;
+        }
+
+        DDMatrix secondCopy = second.Copy();
+        DDNode newRoot = DDNode.TensorProduct(first.root, secondCopy, first.qubits + secondCopy.qubits);
+        return new DDMatrix(secondCopy.nodeList, w, newRoot, first.qubits + secondCopy.qubits);
     }
 
 }

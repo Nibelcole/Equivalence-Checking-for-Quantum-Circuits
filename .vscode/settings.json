@@ -5,5 +5,11 @@
         "**/*.rpa": true,
         "**/*.rpymc": true,
         "**/cache/": true
-    }
+    },
+    "cSpell.words": [
+        "halfx",
+        "halfy",
+        "Qiskit",
+        "qubits"
+    ]
 }
