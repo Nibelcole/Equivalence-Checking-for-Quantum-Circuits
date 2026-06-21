@@ -24,7 +24,7 @@ Note that everything in the same folder as the .exe-file is required for it to r
 
 The previous outlined step will also build the test project located under "ECfQC-Tests". If you wish to directly build the test project, it is also possible to navigate in said folder and use the same commands.
 Additionally, running
-```shell
+```
 dotnet test
 ```
 in the test project will both build and run the tests.
