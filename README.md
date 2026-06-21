@@ -10,8 +10,6 @@ Do achieve this, this project implements Quantum Decision Diagrams (QDDs), a sim
 ## Installation
 This project requires .Net 9.0. 
 
-The test project additionally requires the MathNET.Numerics library (https://numerics.mathdotnet.com/), which can be installed using NuGet (https://www.nuget.org/). The normal project can be built without it.
-
 After cloning the project from GitHub, open a terminal and navigate into the topmost folder ("Equivalence-Checking-for-Quantum-Circuits"). To compile the program, navigate into "ECfQC" and run either
 ```shell
 dotnet build
@@ -20,10 +18,20 @@ or
 ```shell
 dotnet publish
 ```
-The tests can be built in the same way, but you need to navigate into "ECfQC-Tests" instead.
 The compiled binary can then be found under "\bin\Debug\net9.0\EDfQC.exe" (if build is used) or "\bin\Release\net9.0\publish\EDfQC.exe" (if publish is used). 
-Using the latter is recommended as it copied dependencies and creates a more independent project, but the former should work as well. 
+Using the latter is recommended as it copies dependencies and creates a more independent project, but the former should work as well. 
 Note that everything in the same folder as the .exe-file is required for it to run, meaning that if the .exe-file is moved, the other files need to be moved into the same folder.
+
+The previous outlined step will also build the test project located under "ECfQC-Tests". If you wish to directly build the test project, it is also possible to navigate in said folder and use the same commands.
+Additionally, running
+```shell
+dotnet test
+```
+in the test project will both build and run the tests.
+
+The test project requires the MathNET.Numerics library (https://numerics.mathdotnet.com/), however the above commands should account for that. If they don't, the library can be installed using NuGet (https://www.nuget.org/). The normal project can be built without it.
+
+The Python files in the "ECfQC-Tests_Reference" folder are not a core part of the program, as they are only meant to show how the expected values for some test cases were calculated. They can be run as standalone python files, as long as the requirements listed in the "requirements.txt" (Qiskit (https://www.ibm.com/quantum/qiskit) and its dependencies) are installed.
 
 ## Usage
 ```
