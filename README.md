@@ -66,7 +66,7 @@ The argument `-s <arg>` or `--strategy <arg>` is used to determine the strategy 
 | alternating-balanced | proportional | similar to alternating; however, to avoid an imbalance in the case of differently-sized circuits, the switching occurs proportionally to the ratio of the two circuits' relative length to each other |
 | look-ahead | look-ahead | calculates both options in each step and chooses the one that results in a smaller QDD representation|
 
-The default strategy is "look-ahead".
+The default strategy is "alternating-balanced".
 
 
 ### Files

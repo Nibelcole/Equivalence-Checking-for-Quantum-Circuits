@@ -115,8 +115,8 @@ public static class EQChecker
         DDMatrix result = DDMatrix.Identity((int)Math.Log2(length));
         while (first.Count > 0 || second.Count > 0)
         {
-            DDMatrix? res1 = null;
-            DDMatrix? res2 = null;
+            DDMatrix? res1 = null!;
+            DDMatrix? res2 = null!;
 
             // calculate both results
             if (first.Count > 0)

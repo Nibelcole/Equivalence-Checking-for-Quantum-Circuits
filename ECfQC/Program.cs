@@ -12,7 +12,7 @@ int qubits = -1;
 string filePath1 = "";
 string filePath2 = "";
 int b = -1; // the number of simulations; default is qubits (determined after qubits has been read from command-line)
-string strategy = "look-ahead";
+string strategy = "alternating-balanced";
 
 int index = 0;
 while (index < args.Length)
@@ -174,7 +174,6 @@ static void Run(bool verbose, int qubits, string filePath1, string filePath2, Li
                     Console.WriteLine("\tInput: |" + v + "〉\n\t"
                     + "Result from file \"" + filePath1 + "\": " + str1 + "\n\t"
                     + "Result from file \"" + filePath2 + "\": " + str2 + "\n\n"
-                    + "Note that the circuits may still be equivalent. To test this, run the same command with -b 0.\n"
                     );
                     return;
                 }
@@ -232,7 +231,7 @@ static void PrintHelp()
            "                                     simulations if a distinct random value can't be generated in a certain \n" +
            "                                     number of tries\n" +
            "  -s <arg>, --strategy <args>      the strategy to use when conducting G --> I <-- G'\n" +
-           "                                     The default is \"look-ahead\"\n" +
+           "                                     The default is \"alternating-balanced\"\n" +
            "                                     Available options are \"alternating\", \"alternating-balanced\" and \n" +
            "                                     \"look-ahead\"\n" +
            "                                     For more information, see README.md\n" +
