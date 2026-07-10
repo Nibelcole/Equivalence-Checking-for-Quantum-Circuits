@@ -91,7 +91,7 @@ The full list of gates available by default and the number of arguments they tak
 | T gate | t | $`\begin{bmatrix}1 &0 \\0 & e^{i\frac{\pi}{4}} \end{bmatrix}`$ | 1 | 
 | C-Not | cnot | $`\begin{bmatrix}1&0&0&0 \\0&0&0&1 \\ 0&0&1&0 \\0&1&0&0 \end{bmatrix}`$ | 2 | 
 | Swap | sw | $`\begin{bmatrix}1&0&0&0 \\0&0&1&0 \\ 0&1&0&0 \\0&0&0&1 \end{bmatrix}`$ | 2 | 
-| Toffoli | t | $`\begin{bmatrix}1&0&0&0&0&0&0&0 \\0&1&0&0&0&0&0&0 \\ 0&0&1&0&0&0&0&0 \\0&0&0&0&0&0&0&1\\0&0&0&0&1&0&0&0\\0&0&0&0&0&1&0&0\\0&0&0&0&0&0&1&0\\0&0&0&1&0&0&0&0 \end{bmatrix}`$ | 3 | 
+| Toffoli | tof | $`\begin{bmatrix}1&0&0&0&0&0&0&0 \\0&1&0&0&0&0&0&0 \\ 0&0&1&0&0&0&0&0 \\0&0&0&0&0&0&0&1\\0&0&0&0&1&0&0&0\\0&0&0&0&0&1&0&0\\0&0&0&0&0&0&1&0\\0&0&0&1&0&0&0&0 \end{bmatrix}`$ | 3 | 
 
 It is possible to add more gates by appending their id together with their gate matrices to DDMatrix.gates (and rebuilding the code). However, only gates with 1-3 arguments are supported and $S\cdot S^H = \mathbb{I}$ has to hold for any gate matrix S. Specifically gates with 0 arguments other than the identity gate are _not_ supported.
 

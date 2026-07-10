@@ -1,4 +1,6 @@
-.vscode # maybe remove later
+coverage-report
+CoverageReport
+
 
 # Created through "dotnet new gitignore"
 ## Ignore Visual Studio temporary files, build results, and
